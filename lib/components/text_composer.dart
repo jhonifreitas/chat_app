@@ -1,8 +1,12 @@
+import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 
 class TextComposer extends StatefulWidget {
   @override
@@ -28,7 +32,7 @@ class _TextComposerState extends State<TextComposer> {
       user = await _googleSignIn.signIn();
     if(await _auth.currentUser() == null){
       GoogleSignInAuthentication credential = await _googleSignIn.currentUser.authentication;
-      await _auth.signInWithGoogle(idToken: credential.idToken, accessToken: credential.accessToken);
+      // await _auth.signInWithGoogle(idToken: credential.idToken, accessToken: credential.accessToken);
     }
   }
 
@@ -42,12 +46,23 @@ class _TextComposerState extends State<TextComposer> {
       'text': text,
       'imgUrl': imgUrl,
       'from': _googleSignIn.currentUser.displayName,
-      'from_photo_url': _googleSignIn.currentUser.photoUrl
+      'fromPhotoUrl': _googleSignIn.currentUser.photoUrl
     });
     this._msgCtrl.clear();
     setState(() {
-      this._disableButton = true;
+      this._disableButton = false;
     });
+  }
+
+  sendImage() async {
+    await this.ensureLoggedIn();
+    File file = await ImagePicker.pickImage(source: ImageSource.camera);
+    if(file == null) return;
+    StorageUploadTask task = FirebaseStorage.instance.ref().
+      child(_googleSignIn.currentUser.id.toString() + DateTime.now().millisecondsSinceEpoch.toString()).putFile(file);
+    StorageTaskSnapshot taskSnapshot = await task.onComplete;
+    String url = await taskSnapshot.ref.getDownloadURL();
+    _sendMessage(imgUrl: url);
   }
 
   @override
@@ -62,7 +77,9 @@ class _TextComposerState extends State<TextComposer> {
             Container(
               child: IconButton(
                 icon: Icon(Icons.photo_camera),
-                onPressed: (){},
+                onPressed: (){
+                  this.sendImage();
+                },
               ),
             ),
             Expanded(
@@ -81,7 +98,7 @@ class _TextComposerState extends State<TextComposer> {
             ),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 4),
-              child: buildButtonSend(), 
+              child: buildButtonSend(),
             )
           ],
         ),
