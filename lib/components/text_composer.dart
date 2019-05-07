@@ -31,8 +31,12 @@ class _TextComposerState extends State<TextComposer> {
     if(user  == null)
       user = await _googleSignIn.signIn();
     if(await _auth.currentUser() == null){
-      GoogleSignInAuthentication credential = await _googleSignIn.currentUser.authentication;
-      // await _auth.signInWithGoogle(idToken: credential.idToken, accessToken: credential.accessToken);
+      GoogleSignInAuthentication googleAuth = await user.authentication;
+      AuthCredential credential = GoogleAuthProvider.getCredential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
     }
   }
 
